@@ -1,0 +1,83 @@
+#!/usr/bin/env node
+var program = require('commander');
+var Queue = require('queue');
+var path = require('path');
+var debug = require('debug')('instrument');
+var crypto = require('crypto');
+var mongoose = require('mongoose');
+
+var lifecycle = require('../instrument');
+
+program.parse(process.argv);
+
+var mongodb = process.env.MONGODB;
+mongoose.connect(mongodb);
+
+// jobs
+var Job = mongoose.model('jobs', {
+    name: String,
+    repo: String,
+    processed: Boolean
+});
+
+var Result = mongoose.model('results', {
+    name: String,
+    repo: String,
+    error: String,
+    browserify: Boolean,
+    passed: Boolean,
+    framework: Object
+});
+
+var target_base_dir = path.join(process.cwd(), '/var');
+
+var query = Job.find({ processed: false });
+query.tailable(true);
+
+var stream = query.stream();
+
+var queue = new Queue({
+    concurrency: 1
+});
+
+stream.on('data', function (doc) {
+    queue.push(function(done) {
+        doc.processed = true;
+        doc.save(function(err) {
+            if (err) {
+                return done();
+            }
+
+            var repo = doc.repo;
+            var hash = crypto.createHash('md5').update(repo).digest('hex');
+            var target_dir = path.join(target_base_dir, hash);
+
+            lifecycle(repo, target_dir, function(err, status) {
+                var result = new Result();
+                result.name = doc.name;
+                result.repo = repo;
+
+                if (err) {
+                    result.error = err.message;
+                }
+                else {
+                    result.browserify = status.browserify;
+                    result.passed = status.passed;
+                    result.framework = status.framework;
+                }
+
+                result.save(function(err) {
+                    if (err) {
+                        console.error(err);
+                    }
+                    done();
+                });
+            });
+        });
+    });
+    queue.start();
+}).on('error', function (err) {
+    console.log(err);
+}).on('close', function () {
+    console.log('closed');
+});

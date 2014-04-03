@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "dependencies": {
+    "browserify": "3.38.0",
+    "commander": "2.2.0",
+    "debug": "0.8.0",
+    "glob": "3.2.9",
+    "mongoose": "3.8.8",
+    "queue": "2.2.0",
+    "yamljs": "0.1.4",
+    "zuul": "1.6.2"
+  }
+}

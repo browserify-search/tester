@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+var program = require('commander');
+var path = require('path');
+var debug = require('debug')('instrument');
+var crypto = require('crypto');
+
+var lifecycle = require('../instrument');
+
+// return back detected details, passed or failed, and if browserify worked or not
+
+program.parse(process.argv);
+
+var repo = program.args[0];
+var target_base_dir = path.join(process.cwd(), '/var');
+
+var hash = crypto.createHash('md5').update(repo).digest('hex');
+var target_dir = path.join(target_base_dir, hash);
+
+lifecycle(repo, target_dir, function(err, status) {
+    if (err) {
+        console.error(err.stack);
+        return process.exit(1);
+    }
+
+    if (!status || !status.name) {
+        console.error('no status returned, likely a clone and install error');
+        return process.exit(1);
+    }
+
+    var can_browserify = status.browserify;
+    var passed = status.passed;
+
+    debug('%s', (pass) ? 'passed' : 'failed');
+    debug('%s', (pass) ? 'passed' : 'failed');
+    process.exit(0);
+});
