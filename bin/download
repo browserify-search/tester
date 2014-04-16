@@ -1,0 +1,35 @@
+#! /usr/bin/env node
+
+var path = require('path');
+var crypto = require('crypto');
+var zlib = require('zlib');
+
+var npm_fetch = require('npm-fetch');
+var tar = require('tar');
+var barrage = require('barrage');
+
+var module_name = 'reactive';
+var module_version = 'latest';
+
+var pkg = npm_fetch(module_name, module_version);
+
+var key = module_name + module_version;
+var target_base_dir = path.join(process.cwd(), '/var');
+var hash = crypto.createHash('md5').update(key).digest('hex');
+var target_dir = path.join(target_base_dir, hash);
+
+var extract = tar.Extract({
+    path: target_dir,
+    strip: 1
+});
+
+pkg
+.syphon(barrage(zlib.createGunzip()))
+.syphon(barrage(extract))
+.wait(function(err) {
+    if (err) {
+        console.log(err.stack)
+        return process.exit(1);
+    }
+    process.exit(0);
+});

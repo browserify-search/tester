@@ -14,15 +14,15 @@ var mongodb = process.env.MONGODB;
 mongoose.connect(mongodb);
 
 // jobs
-var Job = mongoose.model('jobs', {
+var Job = mongoose.model('queue', {
     name: String,
-    repo: String,
+    version: String,
     processed: Boolean
 });
 
-var Result = mongoose.model('results', {
+var Result = mongoose.model('jobs', {
     name: String,
-    repo: String,
+    version: String,
     error: String,
     browserify: Boolean,
     passed: Boolean,
